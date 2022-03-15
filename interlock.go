@@ -7,7 +7,8 @@ import (
 	"time"
 )
 
-const YIELD_TIME = 100 * time.Microsecond
+const MIN_YIELD_TIME = 100 // * time.Microsecond
+const MAX_YIELD_TIME = 200 // * time.Microsecond
 
 type Interlock struct {
 	IL sync.Map
@@ -25,8 +26,9 @@ func (il *Interlock) WaitOrStart(key string) uint64 {
 
 	for loaded {
 		_, loaded = il.IL.Load(key)
-		log.Printf("Interlock#WaitOrStart: key %v ticket %v yielding", key, ticket)
-		time.Sleep(YIELD_TIME)
+		n := time.Microsecond * time.Duration(MIN_YIELD_TIME+rand.Intn(MAX_YIELD_TIME-MIN_YIELD_TIME+1))
+		log.Printf("Interlock#WaitOrStart: key %v ticket %v yielding for %v", key, ticket, n)
+		time.Sleep(n)
 	}
 
 	log.Printf("Interlock#WaitOrStart: key %v ticket %v exit", key, ticket)

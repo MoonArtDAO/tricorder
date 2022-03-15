@@ -39,7 +39,7 @@ func IsValidTxSignature(txSignature string) bool {
 	return true
 }
 
-func HandleTxV1(txSignature string, w http.ResponseWriter, r *http.Request) (err error, notFound bool) {
+func HandleTxV0(txSignature string, w http.ResponseWriter, r *http.Request) (err error, notFound bool) {
 	if !IsValidTxSignature(txSignature) {
 		return errors.New("not found"), true
 	}
@@ -89,10 +89,10 @@ func HandleTx(responseVersion string, txSignature string,
 	log.Printf("HandleTx: responseVersion %v, txSignature %v", responseVersion, txSignature)
 	switch responseVersion {
 	case "0":
-		return HandleTxV1(txSignature, w, r)
+		return HandleTxV0(txSignature, w, r)
 		break
 	case "latest":
-		return HandleTxV1(txSignature, w, r)
+		return HandleTxV0(txSignature, w, r)
 		break
 	}
 
@@ -204,6 +204,8 @@ func main() {
 	c = c.Append(hlog.RefererHandler("referer"))
 	c = c.Append(hlog.CustomHeaderHandler("ray", "cf-ray"))
 	h := c.Then(http.HandlerFunc(IndexHandler))
+
+	go MaintainCache()
 
 	http.Handle("/", h)
 	for {

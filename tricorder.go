@@ -86,8 +86,11 @@ func HandleTx(responseVersion string, txSignature string,
 		return errors.New("not found"), true
 	}
 
+	log.Printf("HandleTx: responseVersion %v, txSignature %v", responseVersion, txSignature)
 	switch responseVersion {
 	case "0":
+		return HandleTxV1(txSignature, w, r)
+		break
 	case "latest":
 		return HandleTxV1(txSignature, w, r)
 		break

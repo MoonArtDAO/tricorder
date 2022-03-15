@@ -17,8 +17,7 @@ func GetCachedTx(txSignature string) (tx *client.GetTransactionResponse, isSet b
 	cachedTx, isSet, ok := CurrentState.TxMap.Load(txSignature)
 	log.Printf("GetCachedTx: txSignature %v was cached %v isSet %v\n", txSignature, ok, isSet)
 	if ok {
-		mTx := cachedTx.(client.GetTransactionResponse)
-		tx = &mTx
+		tx = cachedTx.(*client.GetTransactionResponse)
 	} else {
 		tx, err = GetTransaction(txSignature)
 		if err == nil {

@@ -74,7 +74,7 @@ type APIErrorResponse struct {
 func MakeAPIInvalidVersionError(inputVersion string) (apiErrorResponse APIErrorResponse) {
 	apiErrorResponse.Status = "fail"
 	apiErrorResponse.Error.ErrorID = "invalid_version"
-	apiErrorResponse.Error.ErrorMessage = fmt.Sprintf("`%v` is not a supported version. Valid versions are: `latest`, `1`.",
+	apiErrorResponse.Error.ErrorMessage = fmt.Sprintf("`%v` is not a supported version. Valid versions are: `latest`, `0`.",
 		inputVersion)
 
 	return

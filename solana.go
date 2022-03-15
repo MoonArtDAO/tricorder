@@ -9,16 +9,10 @@ import (
 	"github.com/rs/zerolog/log"
 	"go.uber.org/ratelimit"
 	"math/rand"
+	"os"
 	"runtime"
 	"strings"
 	"time"
-)
-
-const (
-	QUICKNODE    = ""
-	RPCPOOL      = ""
-	RPCPOOL_BETA = ""
-	MOONRANK_RPC = ""
 )
 
 var DEVNET_ENDPOINTS = []string{"https://api.devnet.solana.com"}
@@ -26,7 +20,6 @@ var PUBLIC_ENDPOINTS = []string{"https://explorer-api.mainnet-beta.solana.com/",
 	"https://mainnet.rpcpool.com/",
 	"https://api.metaplex.solana.com/",
 }
-var PRIVATE_ENDPOINTS = []string{RPCPOOL, QUICKNODE, RPCPOOL_BETA}
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
@@ -44,7 +37,12 @@ func GetRateLimit() int {
 }
 
 func GetPrivateEndpoints() []string {
-	return PRIVATE_ENDPOINTS
+	endpoints := os.Getenv("TRICORDER_PRIVATE_ENDPOINTS")
+	if endpoints == "" && !UseDevNetEndpoints && !UsePublicEndpoints {
+		log.Fatal().Msg("TRICORDER_PRIVATE_ENDPOINTS must be set with a `;` seperated list of endpoints.")
+	}
+
+	return strings.Split(endpoints, ";")
 }
 
 var RateLimiter = ratelimit.New(GetRateLimit(), ratelimit.Per(1*time.Second))

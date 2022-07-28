@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/justinas/alice"
+	"github.com/portto/solana-go-sdk/client"
 	_ "github.com/portto/solana-go-sdk/common"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/hlog"
@@ -30,13 +31,19 @@ var UsePublicEndpoints bool
 
 func InitFlags() {
 	flag.StringVar(&ListenAddress, "addr", "localhost:8080", "listen address")
-	flag.BoolVar(&UseDevNetEndpoints, "d", true, "use devnet endpoints")
+	flag.BoolVar(&UseDevNetEndpoints, "d", false, "use devnet endpoints")
 	flag.BoolVar(&UsePublicEndpoints, "p", true, "use public endpoints")
 	flag.Parse()
 }
 
 func IsValidTxSignature(txSignature string) bool {
 	return true
+}
+
+type APITxResponse struct {
+	Status string                         `json:"status"`
+	Result *client.GetTransactionResponse `json:"result"`
+	Error  *APIError                      `json:"error"`
 }
 
 func HandleTxV0(txSignature string, w http.ResponseWriter, r *http.Request) (err error, notFound bool) {
@@ -57,7 +64,13 @@ func HandleTxV0(txSignature string, w http.ResponseWriter, r *http.Request) (err
 	w.Header().Set("cache-control", "public, max-age=60")
 	w.Header().Set("access-control-allow-origin", "*")
 	w.Header().Set("content-type", "application/json")
-	json.NewEncoder(w).Encode(tx)
+
+	response := APITxResponse{
+		Status: "ok",
+		Result: tx,
+	}
+
+	json.NewEncoder(w).Encode(response)
 	return nil, false
 }
 
@@ -80,6 +93,15 @@ func MakeAPIInvalidVersionError(inputVersion string) (apiErrorResponse APIErrorR
 	return
 }
 
+var ValidVersions = map[string]bool{
+	"0":      true,
+	"latest": true,
+}
+
+func IsValidVersion(responseVersion string) bool {
+	return ValidVersions[responseVersion]
+}
+
 func HandleTx(responseVersion string, txSignature string,
 	w http.ResponseWriter, r *http.Request) (err error, notFound bool) {
 	if !IsValidTxSignature(txSignature) {
@@ -96,11 +118,16 @@ func HandleTx(responseVersion string, txSignature string,
 		break
 	}
 
+	return RespondWithInvalidVersionError(w, r, responseVersion)
+}
+
+func RespondWithInvalidVersionError(w http.ResponseWriter, r *http.Request, responseVersion string) (err error, notFound bool) {
 	m := MakeAPIInvalidVersionError(responseVersion)
 	w.Header().Set("cache-control", "public, max-age=600")
 	w.Header().Set("access-control-allow-origin", "*")
 	w.Header().Set("content-type", "application/json")
 	json.NewEncoder(w).Encode(m)
+
 	return nil, false
 }
 
@@ -131,12 +158,24 @@ func IndexHandler(w http.ResponseWriter, r *http.Request) {
 		parts := CleanStringSlice(strings.Split(r.URL.Path, "/"))
 		log.Printf("IndexHandler: parts: %v", parts)
 		if len(parts) > 2 {
-			switch parts[0] {
-			case "tx":
-				if len(parts) > 2 {
-					err, notFound = HandleTx(parts[1], parts[2], w, r)
-					if err == nil {
-						handled = true
+			version := parts[0]
+			object := parts[1]
+
+			if !IsValidVersion(version) {
+				err, notFound = RespondWithInvalidVersionError(w, r, version)
+				if err == nil {
+					handled = true
+				}
+			} else {
+				switch object {
+				case "tx":
+					if len(parts) > 2 {
+						txSig := parts[2]
+
+						err, notFound = HandleTx(version, txSig, w, r)
+						if err == nil {
+							handled = true
+						}
 					}
 				}
 			}

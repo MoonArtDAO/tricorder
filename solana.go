@@ -42,7 +42,7 @@ func GetPrivateEndpoints() []string {
 		log.Fatal().Msg("TRICORDER_PRIVATE_ENDPOINTS must be set with a `;` seperated list of endpoints.")
 	}
 
-	return strings.Split(endpoints, ";")
+	return CleanStringSlice(strings.Split(endpoints, ";"))
 }
 
 var RateLimiter = ratelimit.New(GetRateLimit(), ratelimit.Per(1*time.Second))
@@ -56,6 +56,10 @@ func CheckIfRateLimitErrorAndWait(err error) {
 
 func GetEndpoints() (endpoints []string) {
 	endpoints = GetPrivateEndpoints()
+	if len(endpoints) > 0 {
+		return
+	}
+
 	if UseDevNetEndpoints {
 		endpoints = DEVNET_ENDPOINTS
 	} else if UsePublicEndpoints {
